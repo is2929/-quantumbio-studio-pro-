@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuantumBio Studio Pro</title>
+<script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+<script src="https://jsme-editor.github.io/dist/jsme/jsme.nocache.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+    --bg: #0d1117; --surface: #161b22; --surface-2: #21262d;
+    --border: #30363d; --text: #c9d1d9; --text-dim: #8b949e;
+    --accent: #58a6ff; --accent-hover: #1f6feb;
+    --success: #238636; --warning: #d29922; --danger: #f85149; --purple: #8957e5;
+    --radius: 8px; --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       background: var(--bg); color: var(--text); font-size: 14px;
+       height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.topbar { flex: 0 0 auto; display: flex; justify-content: space-between;
+          padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { width: 32px; height: 32px; padding: 4px;
+              background: linear-gradient(135deg, var(--accent), var(--purple));
+              border-radius: var(--radius-sm); color: #fff; }
+.brand h1 { font-size: 16px; font-weight: 600; }
+.brand .tagline { font-size: 12px; color: var(--text-dim); }
+#resource-monitor { display: flex; gap: 20px; font-size: 12px;
+                    background: var(--bg); padding: 6px 12px;
+                    border-radius: var(--radius-sm); border: 1px solid var(--border);
+                    font-family: 'Fira Code', monospace; }
+.layout { flex: 1; display: flex; gap: 16px; padding: 16px 24px; min-height: 0; }
+.sidebar { flex: 0 0 420px; display: flex; flex-direction: column; gap: 16px;
+           overflow-y: auto; padding-right: 8px; }
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.card { background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px; flex-shrink: 0; }
+.card-header { display: flex; align-items: center; gap: 10px;
+               margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.step { width: 24px; height: 24px; display: grid; place-items: center;
+        background: var(--surface-2); color: var(--accent);
+        border-radius: var(--radius-sm); font-size: 12px; font-weight: 700; }
+.card h2 { font-size: 14px; font-weight: 600; }
+.tabs { display: flex; gap: 2px; padding: 2px; background: var(--bg);
+        border-radius: var(--radius-sm); margin-bottom: 16px; border: 1px solid var(--border); }
+.tab { flex: 1; padding: 8px; background: transparent; color: var(--text-dim);
+       border: none; border-radius: var(--radius-sm); font-size: 13px;
+       font-weight: 500; cursor: pointer; }
+.tab.active { background: var(--surface-2); color: var(--text); }
+.tab-panel.hidden { display: none; }
+label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; font-weight: 500; }
+select, input[type="text"], input[type="number"], textarea { width: 100%; padding: 8px 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 13px; font-family: inherit; }
+select:focus, input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn { width: 100%; padding: 10px; border: 1px solid transparent;
+       border-radius: var(--radius-sm); font-family: inherit; font-size: 13px;
+       font-weight: 500; cursor: pointer; margin-bottom: 8px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-warning { background: var(--warning); color: #000; }
+.btn-purple { background: var(--purple); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-group { display: flex; gap: 8px; }
+.btn-group .btn { flex: 1; }
+#jsme_container { width: 100%; height: 200px; background: #fff;
+                  border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+
+.main-content { flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.viewer-wrap { flex: 1; display: flex; flex-direction: column; background: #1e1e1e;
+               border-radius: var(--radius); overflow: hidden; position: relative;
+               border: 1px solid var(--border); min-height: 250px; }
+.toolbar { display: flex; gap: 8px; padding: 10px 16px; background: var(--surface);
+           border-bottom: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+.toolbar .btn { width: auto; padding: 6px 12px; font-size: 12px; margin-bottom: 0; }
+#viewer { flex: 1; position: relative; min-height: 0; }
+.orbital-select { padding: 6px 12px; border-radius: var(--radius-sm); background: var(--bg);
+                  color: var(--text); border: 1px solid var(--border); font-size: 12px;
+                  max-width: 200px; font-family: inherit; }
+
+.graphs-panel { flex: 0 0 420px; background: var(--surface);
+                border: 1px solid var(--border); border-radius: var(--radius);
+                display: flex; flex-direction: column; overflow: hidden; }
+.graph-header { padding: 8px 16px; border-bottom: 1px solid var(--border);
+                display: flex; justify-content: space-between; align-items: center; }
+.graph-header h3 { font-size: 12px; color: var(--text-dim); font-weight: 600; }
+.graph-tabs { display: flex; gap: 4px; }
+.graph-tab { padding: 4px 10px; font-size: 11px; background: transparent;
+             border: 1px solid var(--border); border-radius: 4px;
+             color: var(--text-dim); cursor: pointer; }
+.graph-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.graphs-body { flex: 1; position: relative; padding: 12px 16px; display: flex; flex-direction: column; min-height: 0; }
+#mainChart { flex: 1; min-height: 0; width: 100% !important; height: 100% !important; }
+#mdChartSelect { margin-bottom: 12px; padding: 6px 12px; font-size: 12px;
+                 width: 250px; align-self: flex-start; }
+
+.ai-suggestions { background: var(--bg); border: 1px solid var(--purple);
+                  border-radius: var(--radius-sm); padding: 12px; margin-top: 8px; }
+.ai-suggestions.hidden { display: none; }
+.ai-sugg-item { font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.ai-sugg-item:last-child { border-bottom: none; }
+.ai-sugg-title { font-size: 11px; color: var(--purple); font-weight: 700;
+                 text-transform: uppercase; margin-bottom: 6px; }
+.ai-badge { display: inline-block; padding: 2px 6px; border-radius: 4px;
+            font-size: 10px; font-weight: 600; margin-left: 6px; }
+.ai-badge.ok { background: var(--success); color: #fff; }
+.ai-badge.warning { background: var(--warning); color: #000; }
+.ai-badge.danger { background: var(--danger); color: #fff; }
+.ai-rec { background: rgba(88,166,255,0.1); border-left: 3px solid var(--accent);
+          padding: 8px 10px; border-radius: 4px; margin-top: 8px; font-size: 11px; }
+
+.hidden { display: none !important; }
+.freq-list { max-height: 150px; overflow-y: auto; border: 1px solid var(--border);
+             border-radius: var(--radius-sm); margin-top: 8px; background: var(--bg); }
+.freq-item { display: flex; align-items: center; gap: 10px;
+             padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+.props-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.prop-item { background: var(--bg); padding: 10px; border-radius: var(--radius-sm);
+             border: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
+.prop-item span { color: var(--text-dim); font-size: 11px; }
+.prop-item strong { font-size: 14px; font-family: 'Fira Code', monospace; }
+.floating-status { position: absolute; bottom: 24px; right: 24px; width: 320px;
+                   background: var(--surface); border: 1px solid var(--border);
+                   border-radius: var(--radius); padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                   z-index: 1000; }
+.floating-status.hidden { display: none; }
+.status-header { display: flex; justify-content: space-between; margin-bottom: 12px;
+                 font-size: 13px; font-weight: 600; }
+.status-percent { font-family: 'Fira Code', monospace; color: var(--accent); }
+.status-bar { width: 100%; height: 6px; background: var(--bg); border-radius: 3px;
+              overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
+.status-bar-inner { width: 0%; height: 100%; background: var(--accent); transition: width 0.3s; }
+.status-footer { display: flex; justify-content: space-between; font-size: 12px;
+                 color: var(--text-dim); font-family: 'Fira Code', monospace; }
+.cancel-btn { position: absolute; top: 10px; right: 10px; background: var(--danger);
+              color: #fff; border: none; padding: 4px 8px; border-radius: 4px;
+              cursor: pointer; font-size: 11px; }
+.pymol-console { width: 100%; height: 100px; background: #0d1117; color: #4af626;
+                 font-family: 'Fira Code', monospace; font-size: 12px; padding: 8px;
+                 border: 1px solid var(--border); border-radius: var(--radius-sm);
+                 margin-bottom: 8px; resize: vertical; }
+.pymol-log { background: #000; color: #9d9d9d; font-family: 'Fira Code', monospace;
+             font-size: 11px; padding: 8px; border-radius: var(--radius-sm);
+             max-height: 120px; overflow-y: auto; margin-top: 8px; border: 1px solid #30363d; display: none; }
+.results-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+.results-table th, .results-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.results-table th { color: var(--text-dim); }
+.results-table tr:hover { background: var(--surface-2); cursor: pointer; }
+.results-table tr.selected { background: var(--accent); color: #fff; }
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px;
+         background: var(--surface); border: 1px solid var(--border);
+         border-radius: var(--radius); box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+         z-index: 2000; display: none; }
+.toast.success { border-left: 4px solid var(--success); }
+.toast.error { border-left: 4px solid var(--danger); }
+.toast.warning { border-left: 4px solid var(--warning); }
+.toast.info { border-left: 4px solid var(--accent); }
+.ml-results { background: var(--bg); border: 1px solid var(--purple);
+              border-radius: var(--radius-sm); padding: 12px; margin-top: 12px; }
+.ml-results h4 { color: var(--purple); font-size: 12px; margin-bottom: 8px; }
+.ml-item { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; }
+.ml-item span { color: var(--text-dim); }
+
+.md-checklist { position: absolute; bottom: 24px; left: 24px; width: 320px;
+                background: rgba(22, 27, 34, 0.95); border: 1px solid var(--border);
+                border-radius: var(--radius); padding: 12px;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                z-index: 999; backdrop-filter: blur(10px); font-size: 11px; }
+.md-checklist.hidden { display: none !important; }
+.md-checklist-header { display: flex; justify-content: space-between;
+                       align-items: center; margin-bottom: 8px;
+                       padding-bottom: 8px; border-bottom: 1px solid var(--border);
+                       font-weight: 600; color: var(--text); }
+.md-checklist-progress { font-family: 'Fira Code', monospace;
+                         color: var(--accent); font-size: 11px; }
+.md-checklist-body { display: flex; flex-direction: column; gap: 3px;
+                     max-height: 400px; overflow-y: auto; padding-right: 4px; }
+.md-checklist-body::-webkit-scrollbar { width: 4px; }
+.md-checklist-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.md-phase { display: flex; align-items: center; gap: 8px; padding: 3px 0;
+            color: var(--text-dim); transition: color 0.25s ease; font-size: 11px; }
+.md-phase-icon { width: 16px; height: 16px; display: grid; place-items: center;
+                 border-radius: 50%; font-size: 10px; flex-shrink: 0;
+                 border: 1px solid var(--border); background: var(--bg);
+                 transition: all 0.25s ease; }
+.md-phase-number { font-family: 'Fira Code', monospace; font-size: 10px;
+                   color: var(--text-dim); min-width: 22px; }
+.md-phase.pending { opacity: 0.55; }
+.md-phase.running { color: var(--accent); opacity: 1; }
+.md-phase.running .md-phase-icon { color: var(--accent); border-color: var(--accent);
+                                    box-shadow: 0 0 8px rgba(88,166,255,0.5);
+                                    animation: mdPulse 1.2s ease-in-out infinite; }
+.md-phase.done { color: var(--success); opacity: 1; }
+.md-phase.done .md-phase-icon { color: #fff; background: var(--success);
+                                border-color: var(--success); }
+.md-phase.error { color: var(--danger); opacity: 1; }
+.md-phase.error .md-phase-icon { color: #fff; background: var(--danger);
+                                 border-color: var(--danger); }
+.md-phase.skipped { opacity: 0.35; }
+.md-phase.skipped .md-phase-icon { color: var(--text-dim);
+                                   border-color: var(--border);
+                                   background: transparent; }
+@keyframes mdPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(1.2); }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <ellipse cx="12" cy="12" rx="10" ry="4"/>
+            <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
+        </svg>
+        <div><h1>QuantumBio Studio Pro</h1><div class="tagline">Molecular Modeling & Computational Chemistry</div></div>
+    </div>
+    <div id="resource-monitor">
+        <span>CPU: <b id="cpu-usage">--%</b></span>
+        <span>RAM: <b id="ram-usage">-- GB</b></span>
+    </div>
+</header>
+
+<main class="layout">
+    <aside class="sidebar">
+        <section class="card">
+            <div class="card-header"><div class="step">1</div><h2>Entrada Estructural</h2></div>
+            <div class="tabs">
+                <button class="tab active" data-tab="draw" onclick="switchTab('draw')">Ligando</button>
+                <button class="tab" data-tab="pdb" onclick="switchTab('pdb')">Proteína</button>
+                <button class="tab" data-tab="seq" onclick="switchTab('seq')">Secuencia</button>
+            </div>
+            <div class="tab-panel" id="tab-draw">
+                <label>Moléculas de Ejemplo</label>
+                <select id="molSuggest" onchange="applyMolSuggestion(this.value)" style="margin-bottom: 12px;">
+                    <option value="">-- Seleccionar --</option>
+                    <option value="CC(=O)OC1=CC=CC=C1C(=O)O">Aspirina</option>
+                    <option value="CN1C=NC2=C1C(=O)N(C)C(=O)N2C">Cafeína</option>
+                    <option value="CC(C)CC1=CC=C(C=C1)C(C)C(=O)O">Ibuprofeno</option>
+                    <option value="O">Agua (H2O)</option>
+                    <option value="O=O">Oxígeno (O2)</option>
+                </select>
+                <div id="jsme_container"></div>
+                <label>SMILES</label>
+                <input type="text" id="smilesInput" placeholder="Ej: O2, CCO...">
+                <div id="mlResults" class="ml-results hidden">
+                    <h4> Predicción ML</h4>
+                    <div id="mlContent"></div>
+                </div>
+            </div>
+            <div class="tab-panel hidden" id="tab-pdb">
+                <label>RCSB</label>
+                <div class="row" style="margin-bottom: 12px;">
+                    <button class="btn btn-secondary" onclick="fetchSuggestedPDB('1CRN')">1CRN</button>
+                    <button class="btn btn-secondary" onclick="fetchSuggestedPDB('4HHB')">4HHB</button>
+                </div>
+                <div class="row" style="margin-bottom: 12px;">
+                    <button class="btn btn-secondary" onclick="fetchSuggestedPDB('1AKE')">1AKE</button>
+                    <button class="btn btn-secondary" onclick="fetchSuggestedPDB('1BNA')">1BNA</button>
+                </div>
+                <label>Archivo Local</label>
+                <input type="file" id="pdbFile" accept=".pdb, .xyz, .inp" style="margin-bottom: 12px;">
+                <button class="btn btn-secondary" onclick="loadStructureFile()">Cargar</button>
+                <button class="btn btn-warning" onclick="preparePdbWithPyMOL()" style="margin-top: 8px;">
+                     Preparar PDB con PyMOL
+                </button>
+            </div>
+            <div class="tab-panel hidden" id="tab-seq">
+                <label>Secuencia FASTA</label>
+                <textarea id="sequenceInput" rows="4" placeholder="MKTAYIAKQRQISFVKSHFSRQD..."></textarea>
+                <button class="btn btn-secondary" style="margin-top:12px;" onclick="predictAlphaFold()">ESMFold</button>
+                <button class="btn btn-success" style="margin-top: 8px;" onclick="exportStructureToPyMOL()"> Enviar a PyMOL</button>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header"><div class="step"></div><h2>Hardware</h2></div>
+            <label>Núcleos de CPU a utilizar</label>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="range" id="cpuCoresRange" min="1" max="8" value="2" oninput="document.getElementById('cpuCoresLabel').innerText = this.value">
+                <span id="cpuCoresLabel" style="font-weight: bold; font-family: 'Fira Code';">2</span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-dim); margin-top: 8px;">
+                Afecta a Docking, MD y DFT. Usa la mitad de tus núcleos si vas a usar la PC mientras tanto.
+            </p>
+        </section>
+
+        <section class="card">
+            <div class="card-header"><div class="step"></div><h2>Asistente IA</h2></div>
+            <p style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
+                Analiza tus recursos y recomienda la mejor configuración.
+            </p>
+            <button class="btn btn-purple" onclick="askAI()"> Analizar Recursos</button>
+            <div id="aiSuggestions" class="ai-suggestions hidden">
+                <div class="ai-sugg-title">Análisis del Sistema</div>
+                <div id="aiContent"></div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header"><div class="step">2</div><h2>Bioinformática</h2></div>
+
+            <label>Funcional / Exhaustividad (Docking)</label>
+            <select id="dockingExhaustiveness">
+                <option value="8">8 (Rápido - Predeterminado)</option>
+                <option value="16">16 (Equilibrado)</option>
+                <option value="32">32 (Preciso)</option>
+                <option value="64">64 (Muy Preciso - Lento)</option>
+            </select>
+            <button class="btn btn-primary" onclick="runDocking()" id="dockingBtn" disabled style="margin-top: 8px;">Ejecutar Docking (Vina)</button>
+
+            <div id="dockingActions" class="hidden" style="margin-top: 8px;">
+                <button class="btn btn-purple" id="mdFromDockingBtn" onclick="runMDFromDocking()"> Continuar a MD</button>
+                <button class="btn btn-success" onclick="generateBioReport(currentDockingJobId)"> Reporte Docking</button>
+                <button class="btn btn-success" onclick="exportDockingToPyMOL()"> Exportar a PyMOL</button>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid var(--border); margin: 16px 0;">
+
+            <label>Campo de Fuerza (MD)</label>
+            <select id="mdForceField">
+                <option value="amber14-all.xml">Amber14 (Recomendado)</option>
+                <option value="charmm36.xml">CHARMM36</option>
+                <option value="amber99sb.xml">Amber99SB</option>
+            </select>
+
+            <label>Modelo de Solvente (MD)</label>
+            <select id="mdSolvent">
+                <option value="tip3p">TIP3P (Explícito)</option>
+                <option value="spce">SPC/E (Explícito)</option>
+                <option value="implicit">Implicit (GBSA)</option>
+                <option value="vacuum">Vacío (Sin agua)</option>
+            </select>
+
+            <div class="row" style="margin-top: 12px;">
+                <div>
+                    <label>Frames MD</label>
+                    <input type="number" id="mdFramesInput" value="10" min="2" max="200" step="1">
+                </div>
+                <div>
+                    <label>Pasos MD</label>
+                    <input type="number" id="mdStepsInput" value="5000" min="500" max="1000000" step="500">
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="runMD()" id="mdBtn" disabled style="margin-top: 8px;">Dinámica Molecular</button>
+
+            <div id="mdActions" class="hidden" style="margin-top: 8px;">
+                <button class="btn btn-success" onclick="generateBioReport(currentJobId)"> Reporte MD</button>
+            </div>
+
+            <div id="dockingResults" style="display: none; margin-top: 16px;">
+                <h3 style="font-size: 13px; margin-bottom: 8px; color: var(--accent);">Resultados Docking</h3>
+                <table class="results-table" id="dockingTable">
+                    <thead><tr><th>Pose</th><th>Score</th><th>Ki (M)</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header"><div class="step">3</div><h2>Control PyMOL</h2></div>
+            <p style="font-size: 11px; color: var(--warning); margin-bottom: 8px;">
+                Abre PyMOL con: <code style="color:#4af626; background:#000; padding:2px 4px;">pymol -R</code>
+            </p>
+            <label>Comandos PyMOL</label>
+            <textarea id="pymolRpcCommands" class="pymol-console" placeholder="show cartoon&#10;color spectrum&#10;zoom"></textarea>
+            <button class="btn btn-primary" onclick="sendToPyMOL()">Enviar a PyMOL</button>
+            <div id="pymolRpcLog" class="pymol-log"></div>
+        </section>
+
+        <section class="card">
+            <div class="card-header"><div class="step">4</div><h2>Cálculo Cuántico (DFT)</h2></div>
+            <div class="row">
+                <div>
+                    <label>Motor</label>
+                    <select id="engineSelect"><option value="orca">ORCA</option><option value="pyscf">PySCF</option></select>
+                </div>
+                <div>
+                    <label>Tarea</label>
+                    <select id="taskSelect">
+                        <option value="opt">Optimización</option>
+                        <option value="freq">Frecuencias</option>
+                        <option value="opt_freq" selected>Optimizar + Frecuencias</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div>
+                    <label>Funcional (DFT)</label>
+                    <select id="methodSelect">
+                        <optgroup label="GGA">
+                            <option value="BLYP">BLYP</option><option value="BP86">BP86</option>
+                            <option value="PBE">PBE</option><option value="TPSS">TPSS</option>
+                        </optgroup>
+                        <optgroup label="Híbridos">
+                            <option value="B3LYP" selected>B3LYP</option>
+                            <option value="PBE0">PBE0</option>
+                            <option value="M06-2X">M06-2X</option>
+                            <option value="wB97X-D">wB97X-D</option>
+                            <option value="CAM-B3LYP">CAM-B3LYP</option>
+                            <option value="r2SCAN-3c">r²SCAN-3c</option>
+                            <option value="B97-3c">B97-3c</option>
+                        </optgroup>
+                        <optgroup label="Hartree-Fock">
+                            <option value="HF">HF</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
+                    <label>Base Atómica (BSE)</label>
+                    <select id="basisSelect">
+                        <option value="def2-SVP" selected>def2-SVP</option>
+                        <option value="def2-TZVP">def2-TZVP</option>
+                        <option value="def2-TZVPP">def2-TZVPP</option>
+                        <option value="def2-QZVP">def2-QZVP</option>
+                        <option value="6-31G(d)">6-31G(d)</option>
+                        <option value="6-31G(d,p)">6-31G(d,p)</option>
+                        <option value="6-311G(d,p)">6-311G(d,p)</option>
+                        <option value="6-311++G(d,p)">6-311++G(d,p)</option>
+                        <option value="cc-pVDZ">cc-pVDZ</option>
+                        <option value="cc-pVTZ">cc-pVTZ</option>
+                        <option value="cc-pVQZ">cc-pVQZ</option>
+                        <option value="aug-cc-pVDZ">aug-cc-pVDZ</option>
+                        <option value="aug-cc-pVTZ">aug-cc-pVTZ</option>
+                        <option value="STO-3G">STO-3G</option>
+                    </select>
+                </div>
+            </div>
+            <!-- NUEVO: carga y multiplicidad (auto-rellenadas al cargar .inp) -->
+            <div class="row">
+                <div>
+                    <label>Carga Total</label>
+                    <input type="number" id="chargeInput" value="0" step="1">
+                </div>
+                <div>
+                    <label>Multiplicidad (Espín)</label>
+                    <input type="number" id="multInput" value="1" step="1" min="1">
+                </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:16px;" id="runBtn" onclick="startJob()">Ejecutar Cálculo DFT</button>
+        </section>
+
+        <section class="card hidden" id="propertiesCard">
+            <div class="card-header"><div class="step">5</div><h2>Resultados</h2></div>
+            <div class="props-grid">
+                <div class="prop-item"><span>Energía Total</span><strong id="propEnergy">--</strong></div>
+                <div class="prop-item"><span>Convergencia</span><strong id="propConv">--</strong></div>
+                <div class="prop-item"><span>HOMO</span><strong id="propHomo">--</strong></div>
+                <div class="prop-item"><span>LUMO</span><strong id="propLumo">--</strong></div>
+                <div class="prop-item"><span>Gap</span><strong id="propGap">--</strong></div>
+                <div class="prop-item"><span>Dipolo</span><strong id="propDipole">--</strong></div>
+            </div>
+            <div class="btn-group" style="margin-top: 12px;">
+                <button class="btn btn-secondary" onclick="downloadXYZ()">Descargar XYZ</button>
+                <button class="btn btn-success" onclick="generateReport()">Reporte TXT </button>
+            </div>
+        </section>
+
+        <section class="card hidden" id="freqCard">
+            <div class="card-header"><div class="step">6</div><h2>Espectro Vibracional</h2></div>
+            <div class="freq-list" id="freqList"></div>
+            <canvas id="irSpectrumChart" style="max-height: 120px; margin-top: 12px;"></canvas>
+        </section>
+    </aside>
+
+    <div class="main-content">
+        <section class="viewer-wrap">
+            <div class="floating-status hidden" id="globalStatus">
+                <button class="cancel-btn" onclick="cancelCurrentJob()">✕ Cancelar</button>
+                <div class="status-header">
+                    <span id="globalStatusText">Procesando...</span>
+                    <span class="status-percent" id="globalStatusPercent">0%</span>
+                </div>
+                <div class="status-bar"><div class="status-bar-inner" id="globalProgressFill"></div></div>
+                <div class="status-footer">
+                    <span id="globalStatusTime">Restante: --:--</span>
+                    <span id="globalStatusElapsed">Transcurrido: 00:00</span>
+                </div>
+            </div>
+            <div class="toolbar">
+                <button class="btn btn-secondary" onclick="setStyle('ballstick')">Bola/Varilla</button>
+                <button class="btn btn-secondary" onclick="setStyle('cartoon')">Cartoon</button>
+                <button class="btn btn-secondary" onclick="toggleSurface()" id="surfaceBtn">Superficie</button>
+
+                <button class="btn btn-primary" onclick="playMDAnimation()" id="playMDBtn" disabled> Reproducir MD</button>
+                <button class="btn btn-secondary" onclick="stepMDAnimation()" id="stepMDBtn" disabled> Sig. Frame</button>
+                <button class="btn btn-secondary" onclick="stopAnimation()" id="stopBtn" disabled> Detener</button>
+                <button class="btn btn-warning" onclick="applyCleanMDStyle()" id="cleanMDBtn" disabled>Aplicar Limpieza</button>
+
+                <div style="width: 1px; height: 20px; background: var(--border); margin: 0 8px;"></div>
+                <select class="orbital-select" id="orbitalSelect" onchange="renderOrbital(this.value)">
+                    <option value="">Mostrar Orbital...</option>
+                </select>
+            </div>
+            <div id="viewer"></div>
+
+            <div class="md-checklist hidden" id="mdChecklist">
+                <div class="md-checklist-header">
+                    <span> Fases de la Dinámica Molecular</span>
+                    <span class="md-checklist-progress" id="mdChecklistProgress">0/9</span>
+                </div>
+                <div class="md-checklist-body" id="mdChecklistBody"></div>
+            </div>
+        </section>
+
+        <section class="graphs-panel">
+            <div class="graph-header">
+                <h3>Análisis Gráfico</h3>
+                <div class="graph-tabs">
+                    <button class="graph-tab active" data-chart="docking" onclick="switchChartTab('docking')">Docking</button>
+                    <button class="graph-tab" data-chart="md" onclick="switchChartTab('md')">MD</button>
+                    <button class="graph-tab" data-chart="dft" onclick="switchChartTab('dft')">DFT</button>
+                    <button class="graph-tab" data-chart="resources" onclick="switchChartTab('resources')">Recursos</button>
+                </div>
+            </div>
+            <div class="graphs-body">
+                <select id="mdChartSelect" class="hidden" onchange="renderMainChart()">
+                    <option value="potential">Energía Potencial (kcal/mol)</option>
+                    <option value="total">Energía Total (kcal/mol)</option>
+                    <option value="temp">Temperatura (K)</option>
+                    <option value="rmsd">RMSD Proteína C-α (Å)</option>
+                    <option value="rg">Radio de Giro (Å)</option>
+                </select>
+                <canvas id="mainChart"></canvas>
+            </div>
+        </section>
+    </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "#1e1e1e", antialias: false });
+
+let currentPdbText = "", currentXYZ = "";
+
+let currentVibraciones = [], orbitalUrls = {};
+let currentJobId = null, currentDockingJobId = null, currentStructureJobId = null, pollTimer = null;
+let irChart = null, mainChart = null;
+let surfaceVisible = false, systemMemory = 8, currentIsolval = 0.02;
+let currentProteinPdb = "";
+let currentDockingPoses = [], currentDockingScores = [], currentDockingKi = [];
+let selectedPoseIndex = 0;
+let lastAnalytics = { docking: null, md: null, dft: null };
+let currentChartTab = 'docking';
+let currentMDTrajectory = "";
+let totalMDFrames = 0;
+let currentMDFrame = 0;
+const resourceHistory = { time: [], cpu: [], ram: [] };
+
+const MD_PHASES = [
+    { id: 0, code: 0, label: "Análisis de componentes",       match: ["[Fase 0]"] },
+    { id: 2, code: 2, label: "Parametrización OpenFF-2.1.0",  match: ["[Fase 2]"] },
+    { id: 1, code: 1, label: "PDBFixer: reparación + H",      match: ["[Fase 1]"] },
+    { id: 3, code: 3, label: "Solvatación + neutralización",  match: ["[Fase 3]"] },
+    { id: 4, code: 4, label: "Minimización de energía",       match: ["[Fase 4]"] },
+    { id: 5, code: 5, label: "NVT: calentamiento",            match: ["[Fase 5]"] },
+    { id: 6, code: 6, label: "NPT: barostato 1 bar",          match: ["[Fase 6]"] },
+    { id: 7, code: 7, label: "Producción MD (PBC-wrapped)",   match: ["[Fase 7]"] },
+    { id: 8, code: 8, label: "MM/GBSA: ΔG de unión",          match: ["[MM/GBSA]"] },
+];
+let mdPhaseState = {};
+let currentJobType = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    initJSME();
+    fetchSystemInfo();
+    setInterval(fetchSystemInfo, 5000);
+    loadBasisSets();
+    renderMainChart();
+});
+
+function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = `toast ${type}`; t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+async function loadBasisSets() {
+    const select = document.getElementById("basisSelect");
+    try {
+        const response = await fetch("/api/list_basis_sets");
+        const data = await response.json();
+        if (data.basis_sets && data.basis_sets.length > 0) {
+            const existingValues = new Set(Array.from(select.options).map(o => o.value.toLowerCase()));
+            const currentSelection = select.value;
+            data.basis_sets.forEach(name => {
+                if (!existingValues.has(name.toLowerCase())) {
+                    const opt = document.createElement("option");
+                    opt.value = name; opt.textContent = name; select.appendChild(opt);
+                }
+            });
+            select.value = currentSelection || "def2-SVP";
+            showToast(`✓ Catálogo BSE sincronizado (${data.count} bases)`, "info");
+        }
+    } catch (e) {}
+}
+
+function fetchSystemInfo() {
+    fetch("/api/system_info").then(r => r.json()).then(d => {
+        if (!d.error) {
+            document.getElementById("cpu-usage").innerText = d.cpu_percent + "%";
+            document.getElementById("ram-usage").innerText = `${d.ram_avail_gb} / ${d.ram_total_gb} GB`;
+            systemMemory = parseFloat(d.ram_avail_gb) || 8;
+
+            const range = document.getElementById("cpuCoresRange");
+            if (parseInt(range.max) !== d.cpu_count) {
+                range.max = d.cpu_count;
+                range.value = Math.max(1, Math.floor(d.cpu_count / 2));
+                document.getElementById("cpuCoresLabel").innerText = range.value;
+            }
+
+            const now = new Date().toLocaleTimeString().slice(0,8);
+            resourceHistory.time.push(now); resourceHistory.cpu.push(d.cpu_percent); resourceHistory.ram.push(d.ram_avail_gb);
+            if (resourceHistory.time.length > 30) {
+                resourceHistory.time.shift(); resourceHistory.cpu.shift(); resourceHistory.ram.shift();
+            }
+            if (currentChartTab === 'resources') renderMainChart();
+        }
+    }).catch(() => {});
+}
+
+async function preparePdbWithPyMOL() {
+    if (!currentPdbText) return showToast("Primero carga un archivo PDB", "warning");
+    if (!confirm("¿Deseas usar PyMOL para limpiar el PDB? Asegúrate de tener PyMOL abierto con 'pymol -R'")) return;
+    showToast("Limpiando PDB con PyMOL...", "info");
+    updateGlobalStatus("Preparando PDB con PyMOL...", 50, null, 0);
+    try {
+        const resp = await fetch("/api/prepare_pdb", {
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ pdb_text: currentPdbText })
+        });
+        if (!resp.ok) throw new Error("Fallo en el servidor");
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        currentPdbText = data.pdb_text;
+        viewer.clear(); viewer.addModel(currentPdbText, "pdb");
+        viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+        viewer.setStyle({not: {polymer: true}}, { stick: {radius: 0.2, colorscheme: 'greenCarbon'}, sphere: {scale: 0.3, colorscheme: 'greenCarbon'} });
+        viewer.zoomTo(); viewer.render();
+        updateGlobalStatus("Completado", 100);
+        showToast("✓ PDB limpiado y preparado correctamente", "success");
+    } catch(e) {
+        updateGlobalStatus("Error", 100); showToast("Error: " + e.message, "error");
+    }
+}
+
+async function askAI() {
+    const nAtoms = currentXYZ ? parseInt(currentXYZ.split('\n')[0]) : 10;
+    const payload = { task: currentPdbText ? "docking" : "dft", n_atoms: nAtoms, functional: document.getElementById('methodSelect').value, basis: document.getElementById('basisSelect').value };
+    try {
+        const r = await fetch('/api/ai_assistant', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const d = await r.json();
+        const box = document.getElementById('aiSuggestions'); const content = document.getElementById('aiContent');
+        let html = `<div style="margin-bottom:8px; font-size:11px; color:var(--text-dim);">Task: <b>${payload.task.toUpperCase()}</b> | Átomos: <b>${payload.n_atoms}</b> | RAM libre: <b>${d.ram_avail_gb} GB</b> | CPU: <b>${d.cpu_count} núcleos</b></div>`;
+        d.suggestions.forEach(s => {
+            const color = s.startsWith('warning') ? 'var(--warning)' : (s.startsWith('warning') ? 'var(--danger)' : (s.startsWith('✓') ? 'var(--success)' : 'var(--text)'));
+            html += `<div class="ai-sugg-item" style="color:${color}">${s}</div>`;
+        });
+        html += `<div class="ai-rec"><b>Recomendación:</b> ${d.recommended_functional} / ${d.recommended_basis}<span class="ai-badge ${d.level}">${d.level.toUpperCase()}</span></div>`;
+        content.innerHTML = html; box.classList.remove('hidden'); showToast("Análisis IA completado", "info");
+    } catch(e) { showToast("Error: " + e.message, "error"); }
+}
+
+function initJSME() {
+    window.jsmeOnLoad = function() {
+        const jsme = new JSApplet.JSME("jsme_container", "100%", "200px", { options: "oldlook,star" });
+        setInterval(() => {
+            if (document.activeElement.id !== 'smilesInput') {
+                const s = jsme.smiles();
+                if (s && s !== document.getElementById("smilesInput").value) document.getElementById("smilesInput").value = s;
+            }
+        }, 500);
+        let timer;
+        document.getElementById("smilesInput").addEventListener("input", e => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                const smiles = e.target.value.trim(); if (!smiles) return;
+                try {
+                    jsme.readGenericMolecularInput(smiles);
+                    fetch("/api/preview", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ smiles: smiles }) })
+                    .then(r => r.json()).then(d => {
+                        if (d.error) { showToast(d.error, 'error'); return; }
+                        currentXYZ = d.xyz;
+                        // SMILES generado por editor/entrada manual → reset Q/M a valores neutros
+                        document.getElementById("chargeInput").value = 0;
+                        document.getElementById("multInput").value = 1;
+                        document.getElementById("dockingBtn").disabled = !(currentPdbText || currentStructureJobId);
+                        document.getElementById("mdBtn").disabled = !(currentPdbText || currentStructureJobId);
+                        viewer.clear(); viewer.addModel(d.xyz, "xyz");
+                        viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.3 } });
+                        viewer.zoomTo(); viewer.render();
+                        if (d.ml_predictions) displayML(d.ml_predictions);
+                    });
+                } catch(err) {}
+            }, 800);
+        });
+    };
+}
+
+function displayML(mlData) {
+    const box = document.getElementById('mlResults'); const c = document.getElementById('mlContent');
+    if (mlData.error) { box.classList.add('hidden'); return; }
+    let html = '';
+    if (mlData.descriptores) { html += '<div style="margin-bottom:6px"><b>Descriptores:</b></div>'; for (const [k, v] of Object.entries(mlData.descriptores)) html += `<div class="ml-item"><span>${k}</span><span>${v}</span></div>`; }
+    if (mlData.predicciones_ml) { html += '<div style="margin:8px 0 4px"><b>Predicciones:</b></div>'; for (const [k, v] of Object.entries(mlData.predicciones_ml)) html += `<div class="ml-item"><span>${k}</span><span>${v}</span></div>`; }
+    c.innerHTML = html; box.classList.remove('hidden');
+}
+
+function applyMolSuggestion(s) { if (!s) return; const i = document.getElementById("smilesInput"); i.value = s; i.dispatchEvent(new Event('input')); }
+
+function switchTab(name) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    document.getElementById("tab-draw").classList.toggle("hidden", name !== "draw");
+    document.getElementById("tab-pdb").classList.toggle("hidden", name !== "pdb");
+    document.getElementById("tab-seq").classList.toggle("hidden", name !== "seq");
+}
+
+function fetchSuggestedPDB(id) {
+    updateGlobalStatus("Descargando PDB...", 10, null, 0);
+    fetch(`/api/fetch_pdb/${id}`).then(r => r.json()).then(d => {
+        if (d.error) throw new Error(d.error);
+        const blob = new Blob([d.pdb_text], { type: 'text/plain' }); const file = new File([blob], `${id}.pdb`);
+        const dt = new DataTransfer(); dt.items.add(file); document.getElementById("pdbFile").files = dt.files; loadStructureFile();
+    }).catch(e => { updateGlobalStatus("Error", 100); showToast("PDB: " + e.message, 'error'); });
+}
+
+function formatTime(s) { if (s == null) return "--:--"; const m = Math.floor(s / 60), sec = s % 60; return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`; }
+
+function updateGlobalStatus(text, progress, eta, elapsed) {
+    const box = document.getElementById("globalStatus");
+    if (progress >= 100 || text.includes("Error") || text.includes("Cancelado")) { box.classList.add("hidden"); return; }
+    box.classList.remove("hidden");
+    document.getElementById("globalStatusText").innerText = text;
+    document.getElementById("globalStatusPercent").innerText = `${Math.round(progress)}%`;
+    document.getElementById("globalProgressFill").style.width = `${progress}%`;
+    document.getElementById("globalStatusTime").innerText = `Restante: ${formatTime(eta)}`;
+    document.getElementById("globalStatusElapsed").innerText = `Transcurrido: ${formatTime(elapsed || 0)}`;
+}
+
+// =============================================================================
+// CARGA DE ARCHIVOS (.pdb / .xyz / .inp)
+// =============================================================================
+function loadStructureFile() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    const file = document.getElementById("pdbFile").files[0];
+    if (!file) return showToast("Selecciona un archivo", "warning");
+    const fd = new FormData(); fd.append("file", file);
+    fetch("/api/upload_structure", { method: "POST", body: fd })
+    .then(r => r.json()).then(d => {
+        if (d.error) throw new Error(d.error);
+
+        if (d.type === "pdb") {
+            currentPdbText = d.text;
+            currentStructureJobId = null;
+            viewer.clear();
+            viewer.addModel(d.text, "pdb");
+            viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+
+            // Habilitar docking/MD solo si ya hay ligando (SMILES o XYZ)
+            const hasLigand = !!(document.getElementById("smilesInput").value.trim() || currentXYZ);
+            document.getElementById("dockingBtn").disabled = !hasLigand;
+            document.getElementById("mdBtn").disabled = !hasLigand;
+
+        } else if (d.type === "xyz" || d.type === "inp") {
+            currentXYZ = d.text;
+            currentStructureJobId = null;
+            // NO borrar currentPdbText → permite flujo proteína + ligando(.inp)
+
+            // Poblar carga y multiplicidad desde el archivo
+            const charge = (d.charge !== undefined && d.charge !== null) ? d.charge : 0;
+            const mult = (d.multiplicity !== undefined && d.multiplicity !== null) ? d.multiplicity : 1;
+            document.getElementById("chargeInput").value = charge;
+            document.getElementById("multInput").value = mult;
+
+            // Auto-rellenar SMILES si fue detectado
+            if (d.smiles) {
+                document.getElementById("smilesInput").value = d.smiles;
+            }
+
+            viewer.clear();
+            viewer.addModel(d.text, "xyz");
+            viewer.setStyle({}, { stick: { radius: 0.15 }, sphere: { scale: 0.3 } });
+
+            // Habilitar docking/MD solo si hay proteína + SMILES
+            const hasProtein = !!currentPdbText;
+            const hasSmiles = !!d.smiles;
+            document.getElementById("dockingBtn").disabled = !(hasProtein && hasSmiles);
+            document.getElementById("mdBtn").disabled = !(hasProtein && hasSmiles);
+
+            if (d.smiles) {
+                showToast(`✓ ${d.type.toUpperCase()} cargado | SMILES: ${d.smiles} | Q=${charge}, M=${mult}`, "success");
+            } else {
+                showToast(`${d.type.toUpperCase()} cargado (Q=${charge}, M=${mult}) — SMILES no inferido, DFT disponible`, "warning");
+            }
+        }
+
+        updateGlobalStatus("Completado", 100);
+        viewer.zoomTo();
+        viewer.render();
+    }).catch(e => { updateGlobalStatus("Error", 100); showToast(e.message, "error"); });
+}
+
+function cancelCurrentJob() {
+    if (!currentJobId) return; if (!confirm("¿Cancelar?")) return;
+    fetch(`/api/cancelar/${currentJobId}`, { method: "POST" }).then(r => r.json()).then(d => {
+        if (d.success) { showToast("Cancelado", "info"); updateGlobalStatus("Cancelado", 100); } else showToast(d.error, "error");
+    });
+}
+
+function runDocking() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    const s = document.getElementById("smilesInput").value.trim();
+    if (!s) return showToast("Escribe un ligando (SMILES)", "warning");
+    if (!currentPdbText) return showToast("Falta la proteína. Predícela o cárguela primero.", "warning");
+    const exhaustiveness = document.getElementById("dockingExhaustiveness").value;
+    const cpu_cores = parseInt(document.getElementById("cpuCoresRange").value) || 2;
+    startBiotechJob("/api/docking", { pdb_text: currentPdbText, smiles: s, exhaustiveness: exhaustiveness, cpu_cores: cpu_cores });
+}
+
+function runMD() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    if (!currentPdbText) return showToast("Carga o predice una proteína primero", "warning");
+    const nframes = parseInt(document.getElementById("mdFramesInput").value) || 10;
+    const steps = parseInt(document.getElementById("mdStepsInput").value) || 5000;
+    const solvent = document.getElementById("mdSolvent").value;
+    const forcefield = document.getElementById("mdForceField").value;
+    const cpu_cores = parseInt(document.getElementById("cpuCoresRange").value) || 2;
+    if (nframes < 2 || nframes > 200) return showToast("Frames deben estar entre 2 y 200", "warning");
+    startBiotechJob("/api/md", { pdb_text: currentPdbText, nframes: nframes, steps: steps, solvent: solvent, forcefield: forcefield, cpu_cores: cpu_cores });
+}
+
+function runMDFromDocking() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    if (!currentDockingJobId) return showToast("Ejecuta un docking primero", "warning");
+    if (currentDockingPoses.length === 0) return showToast("No hay poses disponibles", "warning");
+
+    const nframes = parseInt(document.getElementById("mdFramesInput").value) || 10;
+    const steps = parseInt(document.getElementById("mdStepsInput").value) || 5000;
+    const solvent = document.getElementById("mdSolvent").value;
+    const forcefield = document.getElementById("mdForceField").value;
+    const cpu_cores = parseInt(document.getElementById("cpuCoresRange").value) || 2;
+    if (nframes < 2 || nframes > 200) return showToast("Frames deben estar entre 2 y 200", "warning");
+
+    const scoreTxt = currentDockingScores[selectedPoseIndex]?.toFixed(2) || '?';
+    if (!confirm(`¿Iniciar MD con la pose ${selectedPoseIndex + 1} (${scoreTxt} kcal/mol)?\n\nEl ligando se incluirá en el sistema.`)) return;
+
+    currentJobType = 'md';
+    resetMDChecklist();
+    showMDChecklist();
+
+    updateGlobalStatus("Iniciando MD con ligando...", 0, null, 0);
+    fetch("/api/md_from_docking", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+            docking_job_id: currentDockingJobId,
+            pose_index: selectedPoseIndex,
+            nframes: nframes, steps: steps,
+            solvent: solvent, forcefield: forcefield,
+            cpu_cores: cpu_cores
+        })
+    })
+    .then(async r => {
+        if (!r.ok) { const t = await r.text(); throw new Error(`HTTP ${r.status}: ${t.substring(0,220)}`); }
+        return r.json();
+    })
+    .then(d => {
+        if (d.error) throw new Error(d.error);
+        currentJobId = d.job_id;
+        const recovered = d.recovered_from_disk ? ' • pose recuperada de disco ✓' : '';
+        showToast(
+            `MD • pose ${d.pose_index + 1}/${d.n_poses} • ` +
+            `${d.protein_atoms} át prot + ${d.ligand_atoms} át lig ` +
+            `(score ${d.pose_score?.toFixed(2) ?? '?'} kcal/mol)${recovered}`,
+            "success"
+        );
+        pollBiotechJob(d.job_id);
+    })
+    .catch(e => { updateGlobalStatus("Error", 100); showToast(e.message, "error"); markMDError(); });
+}
+
+function predictAlphaFold() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    const s = document.getElementById("sequenceInput").value.trim();
+    if (!s) return showToast("Ingresa secuencia", "warning");
+    startBiotechJob("/api/alphafold", { sequence: s });
+}
+
+function startBiotechJob(endpoint, payload) {
+    if (endpoint === "/api/md") {
+        currentJobType = 'md';
+        resetMDChecklist(); showMDChecklist();
+    } else if (endpoint === "/api/docking") {
+        currentJobType = 'docking';
+        document.getElementById('mdChecklist').classList.add('hidden');
+    } else if (endpoint === "/api/alphafold") {
+        currentJobType = 'alphafold';
+        document.getElementById('mdChecklist').classList.add('hidden');
+    }
+
+    document.getElementById("dockingResults").style.display = "none";
+    document.getElementById("dockingActions").classList.add("hidden");
+    document.getElementById("mdActions").classList.add("hidden");
+
+    updateGlobalStatus("Iniciando...", 0, null, 0);
+    fetch(endpoint, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload) })
+    .then(async r => { if (!r.ok) throw new Error(`Error del servidor (${r.status})`); return r.json(); })
+    .then(d => {
+        if (d.error) throw new Error(d.error);
+        currentJobId = d.job_id; if (endpoint === "/api/docking") currentDockingJobId = d.job_id;
+        pollBiotechJob(d.job_id);
+    }).catch(e => {
+        updateGlobalStatus("Error", 100);
+        showToast(e.message, "error");
+        if (currentJobType === 'md') markMDError();
+    });
+}
+
+function resetMDChecklist() {
+    mdPhaseState = {};
+    for (const ph of MD_PHASES) mdPhaseState[ph.id] = 'pending';
+    renderMDChecklist();
+}
+
+function showMDChecklist() { document.getElementById('mdChecklist').classList.remove('hidden'); }
+
+function updateMDChecklist(msg) {
+    if (!msg) return;
+    let matched = null;
+    for (const ph of MD_PHASES) {
+        if (ph.match.some(pat => msg.includes(pat))) { matched = ph; break; }
+    }
+    if (!matched) return;
+
+    for (const id in mdPhaseState) {
+        if (mdPhaseState[id] === 'running' && parseInt(id) !== matched.id) {
+            mdPhaseState[id] = 'done';
+        }
+    }
+    mdPhaseState[matched.id] = 'running';
+    showMDChecklist();
+    renderMDChecklist();
+}
+
+function markMDAllDone() {
+    for (const id in mdPhaseState) {
+        if (mdPhaseState[id] === 'running') mdPhaseState[id] = 'done';
+        if (mdPhaseState[id] === 'pending') mdPhaseState[id] = 'skipped';
+    }
+    renderMDChecklist();
+}
+
+function markMDError() {
+    for (const id in mdPhaseState) {
+        if (mdPhaseState[id] === 'running') mdPhaseState[id] = 'error';
+        if (mdPhaseState[id] === 'pending') mdPhaseState[id] = 'skipped';
+    }
+    renderMDChecklist();
+}
+
+function renderMDChecklist() {
+    const body = document.getElementById('mdChecklistBody');
+    if (!body) return;
+    let html = '';
+    let doneCount = 0;
+    let totalCount = MD_PHASES.length;
+    for (const ph of MD_PHASES) {
+        const status = mdPhaseState[ph.id] || 'pending';
+        if (status === 'done') doneCount++;
+        const icon = status === 'done' ? '✓'
+                   : status === 'running' ? '⟳'
+                   : status === 'error' ? '✗'
+                   : status === 'skipped' ? '−'
+                   : '·';
+        html += `<div class="md-phase ${status}">
+                    <div class="md-phase-icon">${icon}</div>
+                    <span class="md-phase-number">[${ph.code}]</span>
+                    <span>${ph.label}</span>
+                 </div>`;
+    }
+    body.innerHTML = html;
+    document.getElementById('mdChecklistProgress').innerText = `${doneCount}/${totalCount}`;
+}
+
+function pollBiotechJob(jobId) {
+    fetch(`/api/estado/${jobId}`).then(r => r.json()).then(job => {
+        const msg = job.message || job.error || "Procesando..."; const p = job.progress || 0;
+        if (job.status === "running") {
+            updateGlobalStatus(msg, p, job.eta, job.elapsed);
+            if (currentJobType === 'md') updateMDChecklist(msg);
+            setTimeout(() => pollBiotechJob(jobId), 1500);
+        } else if (job.status === "done") {
+            updateGlobalStatus("Completado", 100);
+            if (currentJobType === 'md') markMDAllDone();
+
+            if (job.results && job.results.scores) {
+                showToast("Docking completado", "success");
+                currentProteinPdb = job.results.protein_pdb; currentDockingPoses = job.results.poses; currentDockingScores = job.results.scores;
+                currentDockingKi = job.results.ki_values || []; lastAnalytics.docking = job.results.analytics;
+                showDockingResults();
+                document.getElementById("dockingActions").classList.remove("hidden");
+                switchChartTab('docking');
+            } else if (job.results && job.results.pdb_result) {
+                if (job.results.pdb_result.includes("MODEL")) {
+                    try {
+                        const cleanPDB = job.results.pdb_result;
+                        totalMDFrames = cleanPDB.split("ENDMDL").length - 1;
+                        currentMDFrame = 0;
+                        if (totalMDFrames === 0) { showToast("PDB sin frames válidos", "error"); return; }
+
+                        viewer.clear();
+                        viewer.removeAllSurfaces();
+                        viewer.removeAllShapes();
+                        viewer.addModelsAsFrames(cleanPDB, "pdb");
+
+                        const pipeline = job.results.gl_render_pipeline;
+                        viewer.setStyle({}, {});
+
+                        if (pipeline) {
+                            if (pipeline.filter_out_resnames && pipeline.filter_out_resnames.length > 0) {
+                                viewer.setStyle({resn: pipeline.filter_out_resnames}, {});
+                            }
+                            viewer.setStyle({backbone: true}, { cartoon: { color: "spectrum" } });
+                            viewer.setStyle({not: {backbone: true, resn: pipeline.filter_out_resnames}}, {
+                                stick: { radius: 0.25, colorscheme: "greenCarbon" }
+                            });
+                            if (pipeline.ligand_resname) {
+                                viewer.setStyle({resn: [pipeline.ligand_resname]}, {
+                                    stick: { radius: 0.3, colorscheme: "greenCarbon" },
+                                    sphere: { scale: 0.35, colorscheme: "greenCarbon" }
+                                });
+                            }
+                            if (pipeline.camera && pipeline.camera.zoom_to) {
+                                viewer.zoomTo(pipeline.camera.zoom_to);
+                            } else {
+                                viewer.zoomTo();
+                            }
+                        } else {
+                            viewer.setStyle({backbone: true}, { cartoon: { color: "#c0c0c0" } });
+                            viewer.setStyle({not: {backbone: true}}, { stick: { radius: 0.22, colorscheme: "greenCarbon" }, sphere: { scale: 0.3, colorscheme: "greenCarbon" } });
+                            viewer.zoomTo();
+                        }
+
+                        viewer.setFrame(0);
+                        viewer.render();
+
+                        document.getElementById("stopBtn").disabled    = false;
+                        document.getElementById("playMDBtn").disabled   = true;
+                        document.getElementById("stepMDBtn").disabled   = false;
+                        document.getElementById("cleanMDBtn").disabled  = false;
+
+                        viewer.animate({ loop: "forward", reps: 0, interval: 150 });
+                        setTimeout(() => {
+                            try {
+                                viewer.stopAnimate();
+                                viewer.animate({ loop: "forward", reps: 0, interval: 150 });
+                            } catch(_) {}
+                        }, 350);
+
+                        document.getElementById("mdActions").classList.remove("hidden");
+
+                        const ligInfo  = job.results.has_ligand ? " • con ligando ✓" : " • sin ligando";
+                        const poseInfo = (job.results.pose_index !== null && job.results.pose_index !== undefined)
+                                          ? ` • pose ${job.results.pose_index + 1}` : "";
+                        const mmgbsaInfo = job.results.mmgbsa_binding_energy &&
+                                           job.results.mmgbsa_binding_energy !== "N/A"
+                                           ? ` • ΔG=${job.results.mmgbsa_binding_energy}` : "";
+                        showToast(`MD completada (${totalMDFrames} frames${poseInfo})${ligInfo}${mmgbsaInfo}`,
+                                  job.results.has_ligand ? "success" : "warning");
+                    } catch (err) {
+                        console.error("[MD render]", err);
+                        showToast("MD completada, pero falló el render: " + err.message, "warning");
+                    }
+                } else {
+                    showToast("Estructura lista. Puedes ejecutar Docking o MD.", "info");
+                    viewer.clear(); viewer.addModel(job.results.pdb_result, "pdb");
+                    viewer.setStyle({backbone: true}, { cartoon: { color: "spectrum" } });
+                    viewer.setStyle({not: {backbone: true}}, { stick: { radius: 0.25, colorscheme: 'cyanCarbon' } });
+                    viewer.zoomTo(); viewer.render();
+                    currentPdbText = job.results.pdb_result; currentStructureJobId = jobId;
+                    const hasLigand = !!(document.getElementById("smilesInput").value.trim() || currentXYZ);
+                    document.getElementById("dockingBtn").disabled = !hasLigand;
+                    document.getElementById("mdBtn").disabled = !hasLigand;
+                }
+                if (job.results.analytics) { lastAnalytics.md = job.results.analytics; switchChartTab('md'); }
+            }
+        } else if (job.status === "error") {
+            updateGlobalStatus("Error", 100);
+            if (currentJobType === 'md') markMDError();
+            showToast(msg, "error");
+        }
+    }).catch(err => {
+        console.warn("[poll]", err);
+        setTimeout(() => pollBiotechJob(jobId), 2500);
+    });
+}
+
+function showDockingResults() {
+    const tbody = document.querySelector("#dockingTable tbody");
+    tbody.innerHTML = "";
+    const bestScore = currentDockingScores.length ? Math.min(...currentDockingScores) : 0;
+    currentDockingScores.forEach((s, i) => {
+        const row = document.createElement("tr");
+        const isBest = (s === bestScore);
+        row.innerHTML = `<td>Pose ${i+1}${isBest ? ' **' : ''}</td>
+                         <td>${s.toFixed(2)}</td>
+                         <td>${currentDockingKi[i]?.toExponential(2) || "N/A"}</td>`;
+        row.dataset.poseIndex = i;
+        row.onclick = () => {
+            document.querySelectorAll('#dockingTable tr').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            selectedPoseIndex = i;
+            updateMDFromDockingButton();
+            showDockingPose(i);
+        };
+        tbody.appendChild(row);
+    });
+    document.getElementById("dockingResults").style.display = "block";
+
+    if (currentDockingScores.length > 0) {
+        const bestIdx = currentDockingScores.indexOf(bestScore);
+        selectedPoseIndex = bestIdx;
+        const rows = document.querySelectorAll('#dockingTable tr');
+        if (rows[bestIdx]) rows[bestIdx].classList.add('selected');
+        updateMDFromDockingButton();
+        showDockingPose(bestIdx);
+    }
+}
+
+function updateMDFromDockingButton() {
+    const btn = document.getElementById('mdFromDockingBtn');
+    if (!btn || currentDockingScores.length === 0) return;
+    const score = currentDockingScores[selectedPoseIndex]?.toFixed(2) || '?';
+    btn.innerHTML = ` MD con Pose ${selectedPoseIndex + 1} (${score} kcal/mol)`;
+}
+
+function showDockingPose(index) {
+    viewer.stopAnimate();
+    viewer.clear();
+    viewer.removeAllShapes();
+    viewer.removeAllSurfaces();
+
+    const proteinText = currentProteinPdb || "";
+    const poseText = currentDockingPoses && currentDockingPoses[index] ? currentDockingPoses[index] : "";
+    if (!proteinText.trim()) {
+        showToast("No hay coordenadas de proteína para visualizar.", "error");
+        return;
+    }
+
+    const proteinModel = viewer.addModel(proteinText, "pdb");
+    proteinModel.setStyle({backbone: true}, {cartoon: {color: "#777777"}});
+    proteinModel.setStyle({hetflag: true}, {stick: {radius: 0.18, colorscheme: "grayCarbon"}});
+
+    if (poseText.trim()) {
+        const ligandModel = viewer.addModel(poseText, "pdb");
+        ligandModel.setStyle({}, {
+            stick: {radius: 0.22, colorscheme: "greenCarbon"},
+            sphere: {scale: 0.28, colorscheme: "greenCarbon"}
+        });
+    } else {
+        showToast("La pose seleccionada no contiene coordenadas del ligando.", "warning");
+    }
+
+    viewer.zoomTo();
+    viewer.render();
+}
+
+async function generateBioReport(jobId) {
+    if (!jobId) return showToast("No hay trabajo activo para reportar", "warning");
+    showToast("Generando reporte...", "info");
+    try {
+        const r = await fetch("/api/generate_report", {
+            method: "POST", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ job_id: jobId })
+        });
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        window.open(d.report_url, '_blank');
+        showToast("Reporte generado exitosamente", "success");
+    } catch(e) { showToast("Error: " + e.message, "error"); }
+}
+
+function startJob() {
+    totalMDFrames = 0; currentMDTrajectory = "";
+    const s = document.getElementById("smilesInput").value.trim();
+    if (!s && !currentXYZ) return showToast("Entrada vacía: escribe SMILES o carga un archivo .xyz/.inp", "warning");
+
+    currentJobType = 'dft';
+    document.getElementById('mdChecklist').classList.add('hidden');
+    document.getElementById("mdActions").classList.add('hidden');
+    document.getElementById("dockingActions").classList.add("hidden");
+
+    document.getElementById("freqCard").classList.add("hidden");
+    document.getElementById("propertiesCard").classList.add("hidden");
+    document.getElementById("orbitalSelect").innerHTML = '<option value="">Mostrar Orbital...</option>';
+    document.getElementById("runBtn").disabled = true;
+    updateGlobalStatus("Iniciando DFT...", 0, null, 0);
+
+    const cpu_cores = parseInt(document.getElementById("cpuCoresRange").value) || 2;
+    const charge = parseInt(document.getElementById("chargeInput").value) || 0;
+    const mult   = parseInt(document.getElementById("multInput").value) || 1;
+
+    const payload = {
+        motor: document.getElementById("engineSelect").value,
+        task: document.getElementById("taskSelect").value,
+        smiles: s,
+        xyz_text: currentXYZ,
+        basis: document.getElementById("basisSelect").value,
+        functional: document.getElementById("methodSelect").value,
+        charge: charge,
+        multiplicity: mult,
+        cpu_cores: cpu_cores
+    };
+
+    fetch("/api/calcular", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(payload) })
+    .then(async r => { if (!r.ok) { const text = await r.text(); throw new Error(`HTTP ${r.status}: ${text.substring(0, 100)}`); } return r.json(); })
+    .then(d => { if (d.error) throw new Error(d.error); currentJobId = d.job_id; pollJob(); })
+    .catch(e => { updateGlobalStatus("Error", 100); showToast(e.message, "error"); document.getElementById("runBtn").disabled = false; });
+}
+
+function pollJob() {
+    clearTimeout(pollTimer);
+    fetch(`/api/estado/${currentJobId}`).then(r => r.json()).then(job => {
+        const msg = job.message || job.error || "Calculando..."; const p = job.progress || 0;
+        if (job.status === "running") { updateGlobalStatus(msg, p, job.eta, job.elapsed); pollTimer = setTimeout(pollJob, 1500); }
+        else if (job.status === "done") {
+            updateGlobalStatus("Completado", 100); showToast("DFT completado");
+            orbitalUrls = job.cube_files || {}; currentVibraciones = job.vibraciones || [];
+            const sel = document.getElementById("orbitalSelect");
+            Object.keys(orbitalUrls).sort((a,b) => parseInt(a)-parseInt(b)).forEach(idx => { sel.innerHTML += `<option value="${idx}">Orbital ${idx}</option>`; });
+            if (job.properties) {
+                document.getElementById("propertiesCard").classList.remove("hidden");
+                document.getElementById("propEnergy").innerText = job.properties.energy + " Ha"; document.getElementById("propConv").innerText = job.properties.converged;
+                document.getElementById("propHomo").innerText = job.properties.homo; document.getElementById("propLumo").innerText = job.properties.lumo;
+                document.getElementById("propGap").innerText = job.properties.gap; document.getElementById("propDipole").innerText = job.properties.dipole;
+                lastAnalytics.dft = job.properties; switchChartTab('dft');
+            }
+            const list = document.getElementById("freqList"); list.innerHTML = "";
+            if (currentVibraciones.length > 0) {
+                currentVibraciones.forEach((vib, idx) => {
+                    const div = document.createElement("label"); div.className = "freq-item";
+                    div.innerHTML = `<input type="checkbox" id="chk_${idx}" onchange="toggleVib(${idx})"><span>Modo ${vib.index+1} (${vib.frecuencia.toFixed(1)} cm⁻¹)</span>`;
+                    list.appendChild(div);
+                });
+                document.getElementById("freqCard").classList.remove("hidden"); renderIRSpectrum(currentVibraciones.map(v => v.frecuencia));
+            }
+            if (job.geometry) {
+                currentXYZ = job.geometry; viewer.clear(); viewer.addModel(job.geometry, "xyz");
+                viewer.setStyle({}, { stick: { radius: 0.12 }, sphere: { scale: 0.25 } }); viewer.zoomTo(); viewer.render();
+            }
+            document.getElementById("runBtn").disabled = false;
+        } else if (job.status === "error") { updateGlobalStatus("Error", 100); showToast(job.error, "error"); document.getElementById("runBtn").disabled = false; }
+        else if (job.status === "cancelled") { updateGlobalStatus("Cancelado", 100); document.getElementById("runBtn").disabled = false; }
+    }).catch(() => pollTimer = setTimeout(pollJob, 2500));
+}
+
+function renderIRSpectrum(freqs) {
+    const ctx = document.getElementById('irSpectrumChart').getContext('2d'); if (irChart) irChart.destroy();
+    const pts = freqs.map(f => ({ x: f, y: Math.random()*0.8+0.2 })).sort((a,b) => a.x-b.x);
+    irChart = new Chart(ctx, {
+        type: 'line', data: { datasets: [{ label: 'IR', data: pts, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', borderWidth: 1.5, fill: true, tension: 0.3, pointRadius: 0 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { type: 'linear', grid: { color: '#30363d' }, ticks: { color: '#8b949e' } }, y: { display: false } } }
+    });
+}
+
+function renderOrbital(idx) {
+    if (!idx) { viewer.removeAllShapes(); viewer.render(); return; }
+    fetch(orbitalUrls[idx]).then(r => r.text()).then(cube => {
+        viewer.removeAllShapes(); viewer.addVolumetricData(cube, "cube", { isoval: currentIsolval, color: "#58a6ff", opacity: 0.85 });
+        viewer.addVolumetricData(cube, "cube", { isoval: -currentIsolval, color: "#d29922", opacity: 0.85 }); viewer.render();
+    });
+}
+
+function toggleVib(idx) {
+    if (document.getElementById(`chk_${idx}`).checked) {
+        document.querySelectorAll('input[id^="chk_"]').forEach(cb => { if (cb.id !== `chk_${idx}`) cb.checked = false; });
+        document.getElementById("stopBtn").disabled = false; viewer.clear(); viewer.addModelsAsFrames(currentVibraciones[idx].xyz_anim, "xyz");
+        viewer.setStyle({}, { stick: { radius: 0.12 }, sphere: { scale: 0.25 } }); viewer.animate({ loop: "backAndForth", reps: 10, interval: 40 }); viewer.zoomTo(); viewer.render();
+    } else { stopAnimation(); }
+}
+
+function aplicarEstiloLimpio() {
+    const solventResns = ['HOH', 'WAT', 'NA', 'CL', 'K', 'MG', 'ZN', 'CA', 'MN', 'FE', 'CU', 'CO', 'NI', 'CD', 'HG', 'SO4', 'PO4', 'GOL', 'EDO'];
+    viewer.setStyle({}, {});
+    viewer.setStyle({resn: solventResns}, {});
+    viewer.setStyle({backbone: true}, { cartoon: { color: "#c0c0c0" } });
+    viewer.setStyle({not: {backbone: true, resn: solventResns}}, {
+        stick:  { radius: 0.25, colorscheme: 'greenCarbon' },
+        sphere: { scale: 0.3,  colorscheme: 'greenCarbon' }
+    });
+    viewer.setStyle({resn: ['LIG','UNL','UNK','MOL','DRG']}, {
+        stick:  { radius: 0.3,  colorscheme: 'greenCarbon' },
+        sphere: { scale: 0.35, colorscheme: 'greenCarbon' }
+    });
+    viewer.render();
+}
+
+function applyCleanMDStyle() {
+    aplicarEstiloLimpio(); showToast("Estilo aplicado: Proteína gris, Ligando verde.", "success");
+}
+
+function playMDAnimation() {
+    if (totalMDFrames === 0) return; viewer.animate({ loop: "forward", reps: 0, interval: 150 });
+    document.getElementById("stopBtn").disabled = false; document.getElementById("playMDBtn").disabled = true; document.getElementById("stepMDBtn").disabled = true;
+}
+
+function stepMDAnimation() {
+    if (totalMDFrames === 0) return; viewer.stopAnimate(); currentMDFrame = (currentMDFrame + 1) % totalMDFrames;
+    viewer.setFrame(currentMDFrame); viewer.render(); document.getElementById("stopBtn").disabled = true;
+    document.getElementById("playMDBtn").disabled = false; document.getElementById("stepMDBtn").disabled = false;
+    showToast(`Frame ${currentMDFrame + 1} / ${totalMDFrames}`, "info");
+}
+
+function stopAnimation() {
+    viewer.stopAnimate(); document.getElementById("stopBtn").disabled = true;
+    if (totalMDFrames > 0) { document.getElementById("playMDBtn").disabled = false; document.getElementById("stepMDBtn").disabled = false; }
+    document.querySelectorAll('input[id^="chk_"]').forEach(cb => cb.checked = false);
+}
+
+function setStyle(mode) {
+    viewer.setStyle({}, {});
+    if (totalMDFrames > 0) {
+        const solventResns = ['HOH', 'WAT', 'NA', 'CL', 'K', 'MG', 'ZN', 'CA', 'MN', 'FE', 'CU', 'CO', 'NI', 'CD', 'HG', 'SO4', 'PO4', 'GOL', 'EDO'];
+        if (mode === "cartoon") {
+            aplicarEstiloLimpio();
+        } else {
+            viewer.setStyle({resn: solventResns}, {});
+            viewer.setStyle({backbone: true}, { cartoon: { color: "#888888", opacity: 0.4 } });
+            viewer.setStyle({backbone: true}, { line: { color: "#888888", linewidth: 1 } });
+            viewer.setStyle({not: {backbone: true, resn: solventResns}}, {
+                stick:  { radius: 0.25, colorscheme: 'greenCarbon' },
+                sphere: { scale: 0.35, colorscheme: 'greenCarbon' }
+            });
+            viewer.setStyle({resn: ['LIG','UNL','UNK','MOL','DRG']}, {
+                stick:  { radius: 0.3, colorscheme: 'greenCarbon' },
+                sphere: { scale: 0.4, colorscheme: 'greenCarbon' }
+            });
+            viewer.render();
+        }
+    } else {
+        if (mode === "ballstick") viewer.setStyle({}, { stick: { radius: 0.12 }, sphere: { scale: 0.25 } });
+        else if (mode === "cartoon") viewer.setStyle({backbone: true}, { cartoon: { color: "spectrum" } });
+        viewer.render();
+    }
+}
+
+function toggleSurface() {
+    surfaceVisible = !surfaceVisible;
+    if (surfaceVisible) { viewer.addSurface($3Dmol.SurfaceType.VDW, { opacity: 0.5, color: 'white' }); document.getElementById("surfaceBtn").style.background = "var(--border)"; }
+    else { viewer.removeAllSurfaces(); document.getElementById("surfaceBtn").style.background = "var(--surface-2)"; }
+    viewer.render();
+}
+
+function downloadXYZ() {
+    if (!currentXYZ) return showToast("No hay geometría", "warning");
+    const blob = new Blob([currentXYZ], { type: 'text/plain' }); const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'optimized_geometry.xyz'; a.click(); showToast("Descargado");
+}
+
+function generateReport() {
+    if (!currentJobId) return showToast("Sin trabajo para reportar", "warning");
+    fetch("/api/generate_report", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ job_id: currentJobId }) })
+    .then(r => r.json()).then(d => { if (d.error) throw new Error(d.error); window.open(d.report_url, '_blank'); showToast("Reporte TXT generado (estilo ORCA)", "success"); }).catch(e => showToast(e.message, "error"));
+}
+
+async function exportDockingToPyMOL() {
+    if (!currentDockingJobId) return showToast("Sin docking", "warning");
+    const logBox = document.getElementById("pymolRpcLog"); logBox.style.display = "block"; logBox.innerText = "Exportando a PyMOL...\n";
+    try {
+        const r = await fetch("/api/export_to_pymol", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ job_id: currentDockingJobId, type: "docking" }) });
+        if (!r.ok) { const errorText = await r.text(); throw new Error(`Error del servidor (${r.status}): ${errorText.substring(0, 100)}...`); }
+        const d = await r.json(); if (d.error) throw new Error(d.error);
+        const cmds = `delete all\nload ${d.file_path}, complex\nbg_color white\n` +
+                     `select proteina, polymer\nselect ligando, not polymer\n` +
+                     `hide everything\nshow cartoon, proteina\ncolor green, proteina\n` +
+                     `show sticks, ligando\ncolor cyan, ligando\nshow spheres, ligando\n` +
+                     `set sphere_scale, 0.35, ligando\nzoom ligando, 5`;
+        const r2 = await fetch("/api/pymol_command", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ file_path: d.file_path, commands: cmds }) });
+        if (!r2.ok) { const errorText = await r2.text(); throw new Error(`Error al enviar a PyMOL (${r2.status}): ${errorText.substring(0, 100)}...`); }
+        const d2 = await r2.json(); if (d2.success) { showToast("Enviado a PyMOL"); logBox.innerText += d2.log; } else { throw new Error(d2.error || "Error desconocido en PyMOL"); }
+    } catch(e) { logBox.innerText += "\n " + e.message; showToast("Error exportando a PyMOL", "error"); }
+}
+
+async function exportStructureToPyMOL() {
+    if (!currentPdbText && !currentStructureJobId) return showToast("No hay estructura proteica. Predice una secuencia primero.", "warning");
+    const logBox = document.getElementById("pymolRpcLog"); logBox.style.display = "block"; logBox.innerText = "Exportando estructura a PyMOL...\n";
+    try {
+        let filePath = null;
+        if (currentStructureJobId) {
+            const r = await fetch("/api/export_to_pymol", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ job_id: currentStructureJobId, type: "alphafold" }) });
+            if (!r.ok) throw new Error(`Error del servidor (${r.status})`);
+            const d = await r.json(); if (d.error) throw new Error(d.error); filePath = d.file_path;
+        }
+        else if (currentPdbText) {
+            const cmds = `delete all\nbg_color white\nhide everything\nshow cartoon\ncolor grey80\ncolor red, ss s\ncolor yellow, ss l+\nzoom`;
+            const r2 = await fetch("/api/pymol_command", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ pdb_text: currentPdbText, commands: cmds }) });
+            if (!r2.ok) throw new Error(`Error al enviar a PyMOL (${r2.status})`);
+            const d2 = await r2.json(); if (d2.success) { showToast("Estructura enviada a PyMOL correctamente"); logBox.innerText += d2.log; return; } else { throw new Error(d2.error); }
+        }
+        if (filePath) {
+            const cmds = `delete all\nload ${filePath}, estructura\nbg_color white\nhide everything, estructura\nshow cartoon, estructura\ncolor grey80, estructura\ncolor red, ss s\ncolor yellow, ss l+\nzoom estructura`;
+            const r3 = await fetch("/api/pymol_command", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ file_path: filePath, commands: cmds }) });
+            if (!r3.ok) throw new Error(`Error al enviar a PyMOL (${r3.status})`);
+            const d3 = await r3.json(); if (d3.success) { showToast("Estructura enviada a PyMOL correctamente"); logBox.innerText += d3.log; } else { throw new Error(d3.error); }
+        }
+    } catch(e) { logBox.innerText += "\n " + e.message; showToast("Error exportando a PyMOL: " + e.message, "error"); }
+}
+
+function sendToPyMOL() {
+    let pdb = currentPdbText; if (currentProteinPdb && currentDockingPoses.length) pdb = currentProteinPdb;
+    if (!pdb) return showToast("Sin estructura", "warning");
+    const cmds = document.getElementById("pymolRpcCommands").value; if (!cmds.trim()) return showToast("Escribe un comando", "warning");
+    const log = document.getElementById("pymolRpcLog"); log.style.display = "block"; log.innerText = "Conectando...\n";
+    fetch("/api/pymol_command", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ commands: cmds, pdb_text: pdb }) })
+    .then(async r => { if (!r.ok) { const text = await r.text(); throw new Error(`HTTP ${r.status}: ${text.substring(0, 100)}`); } return r.json(); })
+    .then(d => { log.innerText += d.log || d.error; if (d.success) showToast("Enviado"); })
+    .catch(e => { log.innerText += "\n " + e.message; });
+}
+
+function switchChartTab(tab) {
+    currentChartTab = tab;
+    document.querySelectorAll('.graph-tab').forEach(t => t.classList.toggle('active', t.dataset.chart === tab));
+    document.getElementById("mdChartSelect").classList.toggle("hidden", tab !== 'md');
+    renderMainChart();
+}
+
+function renderMainChart() {
+    const ctx = document.getElementById('mainChart').getContext('2d'); if (mainChart) mainChart.destroy();
+    const baseOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#c9d1d9', font: { size: 10 } } } }, scales: { x: { grid: { color: '#30363d' }, ticks: { color: '#8b949e', font: { size: 10 } } }, y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e', font: { size: 10 } } } } };
+
+    if (currentChartTab === 'docking' && lastAnalytics.docking) {
+        const a = lastAnalytics.docking;
+        mainChart = new Chart(ctx, { type: 'bar', data: { labels: a.frames.map(i => `P${i}`), datasets: [{ label: 'Score (kcal/mol)', data: a.scores, backgroundColor: a.scores.map(s => s === Math.min(...a.scores) ? '#d29922' : '#58a6ff') }] }, options: { ...baseOptions, scales: { ...baseOptions.scales, y: { ...baseOptions.scales.y, reverse: true } } } });
+    } else if (currentChartTab === 'md' && lastAnalytics.md) {
+        const a = lastAnalytics.md;
+        const metric = document.getElementById("mdChartSelect").value;
+        let data = a[metric].map(v => (v === null || isNaN(v) || !isFinite(v)) ? null : v);
+        let color = '#f85149'; let yLabel = '';
+        if (metric === 'rmsd') { color = '#58a6ff'; yLabel = 'RMSD (Å)'; }
+        else if (metric === 'rg') { color = '#8957e5'; yLabel = 'Rg (Å)'; }
+        else if (metric === 'temp') { color = '#d29922'; yLabel = 'Temperatura (K)'; }
+        else if (metric === 'total') { color = '#238636'; yLabel = 'Energía Total (kcal/mol)'; }
+        else { yLabel = 'Energía Potencial (kcal/mol)'; }
+        let validData = data.filter(v => v !== null);
+        let minVal = Math.min(...validData);
+        let maxVal = Math.max(...validData);
+        if (minVal === maxVal) { minVal -= 10; maxVal += 10; }
+        mainChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: a.frames, datasets: [{ label: yLabel, data: data, borderColor: color, backgroundColor: color+'20', yAxisID: 'y', tension: 0.3, pointRadius: 2, fill: true, spanGaps: true }] },
+            options: { ...baseOptions, scales: { x: baseOptions.scales.x, y: { ...baseOptions.scales.y, position: 'left', suggestedMin: minVal, suggestedMax: maxVal, title: { display: true, text: yLabel, color: color, font: { size: 10 } } } } }
+        });
+    } else if (currentChartTab === 'dft' && lastAnalytics.dft) {
+        const p = lastAnalytics.dft; const parse = v => typeof v === 'string' ? parseFloat(v) : v;
+        const homo = parse(p.homo) || 0, lumo = parse(p.lumo) || 0, gap = parse(p.gap) || 0;
+        mainChart = new Chart(ctx, { type: 'bar', data: { labels: ['HOMO', 'LUMO', 'Gap'], datasets: [{ label: 'Energía (eV)', data: [homo, lumo, gap], backgroundColor: ['#238636', '#f85149', '#d29922'] }] }, options: baseOptions });
+    } else if (currentChartTab === 'resources') {
+        mainChart = new Chart(ctx, { type: 'line', data: { labels: resourceHistory.time, datasets: [{ label: 'CPU %', data: resourceHistory.cpu, borderColor: '#58a6ff', backgroundColor: 'rgba(88,166,255,0.1)', yAxisID: 'y', tension: 0.3, pointRadius: 0 }, { label: 'RAM Libre (GB)', data: resourceHistory.ram, borderColor: '#238636', backgroundColor: 'rgba(35,134,54,0.1)', yAxisID: 'y1', tension: 0.3, pointRadius: 0 }] }, options: { ...baseOptions, scales: { x: baseOptions.scales.x, y: { ...baseOptions.scales.y, position: 'left', min: 0, max: 100 }, y1: { ...baseOptions.scales.y, position: 'right', grid: { drawOnChartArea: false } } } } });
+    } else {
+        mainChart = new Chart(ctx, { type: 'bar', data: { labels: ['Sin datos'], datasets: [{ data: [0], backgroundColor: '#30363d' }] }, options: { ...baseOptions, plugins: { legend: { display: false } } } });
+    }
+}
+</script>
+</body>
+</html>

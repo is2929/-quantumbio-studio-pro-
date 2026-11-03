@@ -1,0 +1,17 @@
+Flask>=3.0
+Werkzeug>=3.0
+APScheduler>=3.10
+numpy>=1.24
+requests>=2.31
+psutil>=5.9
+rdkit
+basis-set-exchange
+scikit-learn
+joblib
+pyscf
+reportlab
+biopython
+openmm
+pdbfixer
+openmmforcefields
+openff-toolkit

@@ -1,0 +1,387 @@
+================================================================================
+GUÍA DE INSTALACIÓN : QUANTUMBIO STUDIO PRO v2.0  (Conda + Mamba)
+================================================================================
+Esta guía instala TODAS las dependencias necesarias para ejecutar el servidor
+de QuantumBio Studio Pro: Docking, Dinámica Molecular, PyMOL (RPC), DFT
+(PySCF + ORCA) y la interfaz web Flask.
+
+Entorno de referencia:  Linux (Ubuntu 22.04 / 24.04)  ·  Python 3.10
+
+================================================================================
+PRERREQUISITOS DEL SISTEMA
+================================================================================
+* Linux (probado en Ubuntu 22.04 / 24.04).
+* Git:              sudo apt install git
+* Compilador C/C++: sudo apt install build-essential cmake
+* OpenMPI (para ORCA): sudo apt install libopenmpi3 openmpi-bin
+* curl (opcional):  sudo apt install curl
+
+Verifica que tienes conda/mamba disponible:
+    conda --version
+    (si no, instala Miniconda desde https://docs.conda.io/en/latest/miniconda.html)
+
+================================================================================
+PASO 1: INSTALAR MAMBA (motor rápido para Conda)
+================================================================================
+Mamba evita que Conda se quede colgado en "Solving environment" al instalar
+paquetes científicos pesados (OpenMM, PySCF, RDKit, etc.).
+
+    conda install -n base -c conda-forge mamba -y
+
+================================================================================
+PASO 2: CREAR EL ENTORNO VIRTUAL
+================================================================================
+Creamos el entorno "quantumbio" con Python 3.10.
+(Python 3.10 es la versión de referencia; 3.11 también funciona, pero algunos
+wheels científicos pueden no estar disponibles todavía.)
+
+    mamba create -n quantumbio python=3.10 -y
+    conda activate quantumbio
+
+Comprueba que estás dentro:
+    which python      # debe terminar en .../envs/quantumbio/bin/python
+
+================================================================================
+PASO 3: INSTALAR LIBRERÍAS CIENTÍFICAS (usar Mamba)
+================================================================================
+Se instalan desde conda-forge porque pip tarda demasiado o falla al compilar:
+
+  * openmm, openmmforcefields, openff-toolkit → Dinámica Molecular y ligandos
+  * pdbfixer                                 → Preparación de proteínas
+  * pyscf                                    → Motor DFT nativo
+  * rdkit                                    → Quimioinformática (SMILES → 3D)
+  * biopython                                → Análisis de PDB
+  * pymol-open-source                        → Visor + servidor RPC
+  * numpy                                    → Requerido por core.py
+  * openbabel                                → Conversión PDB/PDBQT/SMILES
+  * autodock-vina                            → Docking molecular
+  * basis_set_exchange                       → Catálogo BSE (opcional pero MUY recomendado)
+
+Comando:
+
+    mamba install -c conda-forge \
+        openmm openmmforcefields openff-toolkit pdbfixer \
+        pyscf rdkit biopython pymol-open-source \
+        numpy openbabel autodock-vina basis_set_exchange -y
+
+
+>Los trabajos se lanzan con threading.Thread. NO es necesario instalarlo.
+
+================================================================================
+PASO 4: INSTALAR LIBRERÍAS WEB Y UTILIDADES (usar pip)
+================================================================================
+Estas funcionan sin problemas con pip dentro del entorno:
+
+    pip install flask psutil requests apscheduler \
+                reportlab scikit-learn joblib
+
+  * flask        → Servidor web
+  * psutil       → Métricas CPU/RAM
+  * requests     → HTTP a UniProt / AlphaFold / ESMFold / RCSB
+  * apscheduler  → Limpieza automática de trabajos viejos
+  * reportlab    → (opcional) reportes en PDF futuros
+  * scikit-learn → (opcional) predicciones ML futuras
+  * joblib       → (opcional) serialización de modelos ML
+
+================================================================================
+PASO 5: INSTALAR BINARIOS EXTERNOS (opcional pero recomendado)
+================================================================================
+Algunos binarios no están en conda-forge o requieren configuración manual.
+
+--- 5.1  OpenBabel y AutoDock Vina (si mamba falló en el Paso 3) ---------------
+    sudo apt install openbabel autodock-vina
+
+    Verificar:
+        obabel -V       # → Open Babel 3.x.x
+        vina --version  # → AutoDock Vina 1.2.x
+
+--- 5.2  PyMOL (si mamba falló en el Paso 3) -----------------------------------
+    sudo apt install pymol
+    # o:
+    conda install -c conda-forge pymol-open-source -y
+
+    Verificar:
+        pymol --version
+
+    Para que la integración RPC funcione, ejecútalo en modo servidor (ver Paso 8):
+        pymol -R
+
+--- 5.3  ORCA 5.x (opcional, motor DFT alternativo a PySCF) --------------------
+    1. Regístrate en https://orcaforum.kofo.mpg.de
+    2. Descarga orca_5_0_x_linux_x86-64_shared_openmpi411.tar.xz
+    3. Extrae:
+           sudo mkdir -p /opt/orca
+           sudo tar -xf orca_*.tar.xz -C /opt/orca --strip-components=1
+    4. Comprueba:
+           export LD_LIBRARY_PATH=/opt/orca:$LD_LIBRARY_PATH
+           /opt/orca/orca --version
+
+    > ORCA NO es obligatorio. Si no lo tienes, la app usa PySCF por defecto.
+    > Si lo tienes en otra ruta, configúralo con la variable de entorno
+    > ORCA_DIR (ver Paso 6).
+
+================================================================================
+PASO 6: CONFIGURAR VARIABLES DE ENTORNO
+================================================================================
+Puedes exportarlas en tu shell o crear un fichero `.env` en la raíz del proyecto.
+
+    # Ruta de ORCA (si lo tienes instalado; por defecto /opt/orca)
+    export ORCA_DIR=/opt/orca
+
+    # Puerto del servidor web (por defecto 5001)
+    export PORT=5001
+
+    # Nivel de log (DEBUG, INFO, WARNING, ERROR)
+    export LOG_LEVEL=INFO
+
+>  El código en core.py tiene una ruta por defecto hardcodeada para ORCA_DIR.
+>   Revísala y cámbiala si tu instalación es distinta:
+>       ORCA_DIR = os.environ.get("ORCA_DIR", "/opt/orca")
+
+================================================================================
+PASO 7: SOLUCIÓN AL CONFLICTO DE PYSCF (muy importante)
+================================================================================
+Si al arrancar main.py aparece:
+
+    AttributeError: module 'pyscf.gto.basis' has no attribute 'to_general_contraction'
+
+Es porque Python está leyendo una versión antigua de PySCF instalada en tu
+usuario (~/.local) en lugar de la del entorno conda.
+
+Solución:
+
+    rm -rf ~/.local/lib/python3.10/site-packages/pyscf
+
+Después, verifica dentro del entorno conda:
+
+    python -c "import pyscf; print(pyscf.__version__)"
+
+================================================================================
+PASO 8: VERIFICACIÓN FINAL
+================================================================================
+Ejecuta este script desde la RAÍZ del proyecto (donde está main.py).
+Comprueba imports Y los flags que usa la app internamente.
+
+    python - <<'PY'
+    import sys
+    print(f"Python: {sys.version.split()[0]}")
+    print(f"Executable: {sys.executable}")
+    print()
+
+    ok = True
+
+    # Dependencias obligatorias
+    try:
+        import flask, psutil, requests, numpy, rdkit
+        print(f"[OK] flask          {flask.__version__}")
+        print(f"[OK] psutil         {psutil.__version__}")
+        print(f"[OK] requests       {requests.__version__}")
+        print(f"[OK] numpy          {numpy.__version__}")
+        print(f"[OK] rdkit          {rdkit.__version__}")
+    except Exception as e:
+        ok = False; print(f"[FAIL] {e}")
+
+    # Opcionales (con flags en core.py)
+    optional = {
+        "pyscf":              "PYSCF_AVAILABLE",
+        "openmm":             "OPENMM_AVAILABLE",
+        "openmmforcefields":  "OPENMMFF_AVAILABLE",
+        "openff.toolkit":     "OPENMMFF_AVAILABLE",
+        "pdbfixer":           "PDBFIXER_AVAILABLE",
+        "Bio":                "BIO_AVAILABLE",
+        "basis_set_exchange": "BSE_AVAILABLE",
+        "reportlab":          "REPORTLAB_AVAILABLE",
+        "sklearn":            "SKLEARN_AVAILABLE",
+    }
+    for pkg, flag in optional.items():
+        try:
+            m = __import__(pkg)
+            v = getattr(m, "__version__", "?")
+            print(f"[OK] {pkg:20s} {v:12s}  (flag: {flag})")
+        except ImportError:
+            print(f"[..] {pkg:20s} (no instalado, flag {flag}=False)")
+
+    print()
+
+    # Flags reales que expone core.py
+    try:
+        import core
+        for f in ("PYSCF_AVAILABLE","OPENMM_AVAILABLE","OPENMMFF_AVAILABLE",
+                  "PDBFIXER_AVAILABLE","BIO_AVAILABLE","BSE_AVAILABLE",
+                  "REPORTLAB_AVAILABLE","SKLEARN_AVAILABLE"):
+            print(f"{f:22s} = {getattr(core, f, None)}")
+        print(f"{'ORCA_BINARY':22s} = {getattr(core, 'ORCA_BINARY', '?')}")
+        print(f"{'ORCA_LIB_DIR':22s} = {getattr(core, 'ORCA_LIB_DIR', '?')}")
+    except Exception as e:
+        print(f"[WARN] No se pudo importar core.py: {e}")
+
+    print()
+    if ok:
+        print(">>> DEPENDENCIAS OBLIGATORIAS OK <<<")
+    else:
+        print(">>> FALTAN DEPENDENCIAS OBLIGATORIAS <<<")
+    PY
+
+Verificación de binarios externos:
+
+    which obabel vina pymol 2>/dev/null
+    obabel -V
+    vina --version
+    pymol --version
+
+    # ORCA (si está configurado)
+    echo "ORCA_DIR = ${ORCA_DIR:-/opt/orca}"
+    ${ORCA_DIR:-/opt/orca}/orca --version 2>&1 | head -3
+
+    # Dependencias dinámicas de ORCA
+    ldd ${ORCA_DIR:-/opt/orca}/orca | grep -i "not found" || echo "ORCA OK"
+
+================================================================================
+PASO 9: EJECUTAR LA APLICACIÓN
+================================================================================
+
+--- Terminal 1: servidor web --------------------------------------------------
+    conda activate quantumbio
+    cd /ruta/a/quantumbio-studio-pro
+    python main.py
+
+    Salida esperada:
+        * Running on http://127.0.0.1:5001
+        * Running on http://<tu-ip>:5001
+
+    Abre el navegador en http://localhost:5001
+
+--- Terminal 2: PyMOL en modo servidor RPC ------------------------------------
+    # Necesario para el botón "Exportar a PyMOL" y "Preparar PDB con PyMOL"
+    conda activate quantumbio
+    pymol -R
+
+    Deja la terminal abierta. Escucha en 127.0.0.1:9123.
+
+================================================================================
+ESTRUCTURA DE FICHEROS ESPERADA
+================================================================================
+    quantumbio-studio-pro/
+    ├── main.py                       ← Entry point (antes app1.py)
+    ├── core.py                       ← Estado compartido + dependencias
+    ├── modules/
+    │   ├── __init__.py
+    │   ├── quimica_computacional.py  ← Blueprint DFT
+    │   └── bioinformatica.py         ← Blueprint bioinformática
+    ├── templates/
+    │   └── index.html                ← UI (SPA)
+    ├── static/
+    │   └── uploads/
+    ├── jobs/                         ←  Generado en runtime (NO subir)
+    ├── models/                       ← (opcional) modelos ML
+    ├── bse_cache.json                ←  Generado en runtime (NO subir)
+    ├── requirements.txt
+    ├── .gitignore
+    └── README.md
+
+
+
+================================================================================
+SOLUCIÓN DE PROBLEMAS
+================================================================================
+
+[1] "PyMOL no conectado. Ejecuta: pymol -R"
+    → Abre otra terminal y ejecuta `pymol -R`. Mantenla abierta.
+    → Comprueba que escucha: `ss -tlnp | grep 9123`
+
+[2] "AttributeError: module 'pyscf.gto.basis' has no attribute 'to_general_contraction'"
+    → Ver Paso 7: borra ~/.local/lib/python3.10/site-packages/pyscf
+
+[3] "openmmforcefields no instalado" al lanzar MD
+    → mamba install -c conda-forge openmmforcefields
+    → Verifica: python -c "import openmmforcefields; print('ok')"
+
+[4] "PDBFixer no instalado"
+    → mamba install -c conda-forge pdbfixer
+
+[5] "Base 'X' no nativa (BSE no instalado)"
+    → mamba install -c conda-forge basis_set_exchange
+
+[6] ORCA falla con "libmpi.so.40: cannot open shared object file"
+    → sudo apt install libopenmpi3 openmpi-bin
+    → Comprueba: ldd $ORCA_DIR/orca | grep "not found"
+
+[7] ORCA falla con "Cannot open input file"
+    → Asegúrate de que ORCA_DIR apunta a la carpeta correcta (sin /orca al final).
+    → Comprueba: python -c "import core; print(core.ORCA_BINARY)"
+
+[8] "ESMFold no respondió" en predicción de estructura
+    → La API pública puede estar saturada. Reintenta en unos minutos.
+    → Si tu secuencia es > 400 aa, ESMFold la rechaza; usa AlphaFold DB
+      (busca en UniProt) o sube un PDB ya existente.
+
+[9] Vina falla con "Cannot read ligand.pdbqt"
+    → Verifica que obabel esté instalado: `which obabel`
+    → Si obabel falla con --gen3d, prueba: sudo apt install openbabel
+
+[10] "No space left on device" durante MD
+     → Los trabajos se guardan en jobs/<uuid>/. Límpialos:
+           find jobs/ -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+     → O ajusta el scheduler de limpieza en core.py (24 h por defecto).
+
+[11] La UI no actualiza el progreso
+     → Comprueba la consola del navegador (F12) por errores 404/500.
+     → Verifica que /api/estado/<job_id> responde:
+           curl http://localhost:5001/api/estado/<job_id>
+
+[12] "Address already in use" al arrancar main.py
+     → Cambia el puerto: PORT=5002 python main.py
+     → O mata el proceso previo: lsof -i :5001
+
+================================================================================
+INSTALACIÓN RÁPIDA ALTERNATIVA (solo pip, sin conda)
+================================================================================
+Si prefieres no usar conda (NO recomendado para OpenMM/PySCF):
+
+    python3.10 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip wheel setuptools
+    pip install -r requirements.txt
+
+Con requirements.txt mínimo:
+
+    flask>=3.0
+    psutil>=5.9
+    requests>=2.30
+    numpy>=1.24
+    rdkit>=2023.9
+    openmm>=8.0
+    openmmforcefields>=0.13
+    openff-toolkit>=0.15
+    pdbfixer>=1.9
+    pyscf>=2.5
+    biopython>=1.81
+    apscheduler>=3.10
+    basis_set_exchange>=0.10
+    reportlab>=4.0
+    scikit-learn>=1.3
+    joblib>=1.3
+
+> ⚠️ Con pip, OpenMM y PySCF pueden tardar mucho o fallar en algunas
+> distribuciones. Conda/mamba es la vía recomendada.
+
+================================================================================
+NOTAS FINALES
+================================================================================
+* Celery ya NO se usa. Los trabajos corren en threads dentro del proceso Flask.
+* reportlab, scikit-learn y joblib son opcionales: el código los envuelve en
+  try/except y activa flags (REPORTLAB_AVAILABLE, SKLEARN_AVAILABLE) según
+  disponibilidad. La app funciona sin ellos, pero se pierden funcionalidades
+  futuras (PDF, predicciones ML).
+* ORCA es opcional. Sin él, todos los cálculos DFT usan PySCF (más lento para
+  moléculas grandes, pero 100% funcional).
+* PyMOL en modo `-R` es necesario solo para los botones "Preparar PDB" y
+  "Exportar a PyMOL". El resto de la app funciona sin PyMOL.
+* El servidor escucha en 0.0.0.0:5001, así que es accesible desde otros
+  equipos de tu red. Si no quieres exponerlo, edita main.py:
+      app.run(host="127.0.0.1", port=5001, ...)
+* Para uso multiusuario, NO uses varios workers de gunicorn: JOBS es un dict
+  en memoria y cada worker tendría su propio estado. Migra JOBS a Redis/SQLite
+  si necesitas escalar.
+
+================================================================================
