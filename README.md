@@ -1,6 +1,6 @@
-# QuantumBio Studio Pro — versión modular
+# QuantumBio Studio Pro — versión 1.0
 
-La aplicación se organiza en dos módulos científicos conectados desde `main.py`. Revisar el archivo instrucciones_instalación.txt y seguir los pasos
+La aplicación se organiza en dos módulos científicos conectados desde `main.py`. Revisar el archivo `instrucciones_instalación.txt` y seguir los pasos en este.
 
 ## Estructura
 
